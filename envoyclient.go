@@ -14,13 +14,8 @@ import (
 )
 
 type EnvoyClient struct {
-	Cache  EnvoyCache
+	Cache  envoyCache
 	Config Config
-}
-
-type EnvoyCache struct {
-	EnvoyToken          string
-	EnvoyTokenExpiresAt time.Time
 }
 
 type Config struct {
@@ -30,11 +25,16 @@ type Config struct {
 	EnvoyIP       string
 }
 
-type EnphaseLoginResponse struct {
+type envoyCache struct {
+	EnvoyToken          string
+	EnvoyTokenExpiresAt time.Time
+}
+
+type enphaseLoginResponse struct {
 	SessionId string `json:"session_id"`
 }
 
-type ProductionData struct {
+type productionData struct {
 	ProductionWattsNow  float64
 	ConsumptionWattsNow float64
 }
@@ -179,19 +179,19 @@ func (e *EnvoyClient) getEnphaseSessionId() (string, error) {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
 
-	var enphaseLoginResponse EnphaseLoginResponse
-	err = json.Unmarshal(body, &enphaseLoginResponse)
+	var response enphaseLoginResponse
+	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return "", fmt.Errorf("error unmarshaling response body: %v", err)
 	}
 
-	return enphaseLoginResponse.SessionId, nil
+	return response.SessionId, nil
 }
 
-func (e *EnvoyClient) GetProductionData() (ProductionData, error) {
+func (e *EnvoyClient) GetProductionData() (productionData, error) {
 	envoyToken, err := e.getEnvoyToken()
 	if err != nil {
-		return ProductionData{}, fmt.Errorf("error getting envoy token: %v", err)
+		return productionData{}, fmt.Errorf("error getting envoy token: %v", err)
 	}
 
 	req, _ := http.NewRequest(
@@ -207,7 +207,7 @@ func (e *EnvoyClient) GetProductionData() (ProductionData, error) {
 	client := &http.Client{Transport: tr}
 	res, err := client.Do(req)
 	if err != nil {
-		return ProductionData{}, fmt.Errorf("error making request: %v", err)
+		return productionData{}, fmt.Errorf("error making request: %v", err)
 	}
 
 	var resData map[string]interface{}
@@ -217,7 +217,7 @@ func (e *EnvoyClient) GetProductionData() (ProductionData, error) {
 	consumption := resData["consumption"].([]interface{})
 	production := resData["production"].([]interface{})
 
-	var productionData ProductionData
+	var productionData productionData
 
 	for _, v := range consumption {
 		vals := v.(map[string]interface{})
